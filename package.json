@@ -1,5 +1,5 @@
 {
-  "name": "tailadmin-react-free",
+  "name": "NIST-Faculty-Dasboard",
   "private": true,
   "version": "1.3.7",
   "type": "module",
@@ -9,9 +9,9 @@
     "preview": "vite preview"
   },
   "author": {
-    "name": "TailAdmin",
-    "email": "hello@tailadmin.com",
-    "url": "https://tailadmin.com"
+    "name": "NIST University",
+    "email": "hello@nist.edu",
+    "url": "https://nist.edu"
   },
   "dependencies": {
     "apexcharts": "^3.41.0",

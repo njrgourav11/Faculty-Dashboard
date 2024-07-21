@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import Breadcrumb from '../../components/Breadcrumbs/Breadcrumb';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from './firebase';
-import LogoDark from '../../images/logo/logo-dark.svg';
+import LogoDark from '../../images/logo/logo.svg';
 import Logo from '../../images/logo/logo.svg';
 
 
