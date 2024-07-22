@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, getDocs, doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '../../pages/Authentication/firebase';
+import * as XLSX from 'xlsx';
 
 interface Student {
   id: string;
@@ -9,8 +10,8 @@ interface Student {
   totalClasses?: number;
   classesAttended?: number;
   status?: string;
-  subject?: string; // Add this if subject is part of student data
-  phoneNo?: string; // Add this if phone number is part of student data
+  subject?: string;
+  phoneNo?: string;
 }
 
 const Faculty: React.FC = () => {
@@ -85,7 +86,7 @@ const Faculty: React.FC = () => {
     try {
       await updateStudent(studentId, { status: 'absent' });
       await updateStudentClasses(studentId, false);
-      const response = await fetch('/absent', {
+      const response = await fetch('http://localhost:5173/absent', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -93,10 +94,10 @@ const Faculty: React.FC = () => {
         body: JSON.stringify({ studentName, rollNumber, subject, phoneNumber }),
       });
       if (response.ok) {
-        // Display popup message if the SMS is sent successfully
         alert('SMS sent successfully');
       } else {
-        throw new Error('Failed to send SMS');
+        const errorText = await response.text();
+        throw new Error(`Failed to send SMS. Status: ${response.status}, Details: ${errorText}`);
       }
     } catch (error) {
       console.error('Error marking absent:', error);
@@ -124,6 +125,32 @@ const Faculty: React.FC = () => {
     } catch (error) {
       console.error('Error updating student classes:', error);
     }
+  };
+
+  const handleSubmit = () => {
+    generateExcelSheet(students);
+  };
+
+  const generateExcelSheet = (data: Student[]) => {
+    const worksheet = XLSX.utils.json_to_sheet(data.map(student => ({
+      Name: student.name,
+      Roll: student.roll,
+      TotalClasses: student.totalClasses,
+      ClassesAttended: student.classesAttended,
+      Status: student.status,
+      Subject: student.subject,
+      PhoneNo: student.phoneNo,
+    })));
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Attendance');
+    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const dataBlob = new Blob([excelBuffer], { type: 'application/octet-stream' });
+    const url = window.URL.createObjectURL(dataBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'attendance.xlsx';
+    a.click();
+    window.URL.revokeObjectURL(url);
   };
 
   return (
@@ -221,7 +248,7 @@ const Faculty: React.FC = () => {
                   onClick={() => markPresent(student.id)}
                   className="px-4 py-2 text-white bg-green-500 rounded-md hover:bg-green-600"
                 >
-                   Present
+                  Present
                 </button>
                 <button
                   onClick={() =>
@@ -229,7 +256,7 @@ const Faculty: React.FC = () => {
                       student.id,
                       student.name,
                       student.roll,
-                      student.subject, // Replace with actual subject if available
+                      student.subject,
                       student.phoneNo
                     )
                   }
@@ -243,6 +270,14 @@ const Faculty: React.FC = () => {
         ) : (
           <p className="p-2.5 xl:p-5 text-black dark:text-white">No students found.</p>
         )}
+      </div>
+      <div className="flex justify-center">
+        <button
+          onClick={handleSubmit}
+          className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+        >
+          Submit and Download Excel
+        </button>
       </div>
     </div>
   );
