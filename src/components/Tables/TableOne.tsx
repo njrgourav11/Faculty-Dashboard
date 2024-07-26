@@ -7,17 +7,15 @@ interface Student {
   id: string;
   name: string;
   roll: string;
-  totalClasses?: number;
-  classesAttended?: number;
   status?: string;
-  subject?: string;
-  phoneNo?: string;
 }
 
 const Faculty: React.FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedBatch, setSelectedBatch] = useState<string>('');
   const [selectedSection, setSelectedSection] = useState<string>('');
+  const [time, setTime] = useState<string>(new Date().toISOString().split('T')[1].split('.')[0]);
+  const [date, setDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
   const batches = [
     { id: 'Batch 2021', name: 'Batch 2021' },
@@ -76,22 +74,20 @@ const Faculty: React.FC = () => {
   const markPresent = async (studentId: string) => {
     try {
       await updateStudent(studentId, { status: 'present' });
-      await updateStudentClasses(studentId, true);
     } catch (error) {
       console.error('Error marking present:', error);
     }
   };
 
-  const markAbsent = async (studentId: string, studentName?: string, rollNumber?: string, subject?: string, phoneNumber?: string) => {
+  const markAbsent = async (studentId: string, studentName?: string, rollNumber?: string) => {
     try {
       await updateStudent(studentId, { status: 'absent' });
-      await updateStudentClasses(studentId, false);
-      const response = await fetch('http://localhost:5173/absent', {
+      const response = await fetch('http://localhost:5000/absent', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ studentName, rollNumber, subject, phoneNumber }),
+        body: JSON.stringify({ studentName, rollNumber, date, time }),
       });
       if (response.ok) {
         alert('SMS sent successfully');
@@ -104,29 +100,6 @@ const Faculty: React.FC = () => {
     }
   };
 
-  const updateStudentClasses = async (studentId: string, isPresent: boolean) => {
-    try {
-      const studentRef = doc(
-        db,
-        `batches/${selectedBatch}/sections/${selectedSection}/students/${studentId}`
-      );
-      const studentDoc = await getDoc(studentRef);
-      if (studentDoc.exists()) {
-        const studentData = studentDoc.data() as Student;
-        const totalClasses = studentData.totalClasses || 0;
-        const classesAttended = studentData.classesAttended || 0;
-        const updatedTotalClasses = totalClasses + 1;
-        const updatedClassesAttended = isPresent ? classesAttended + 1 : classesAttended;
-        await updateDoc(studentRef, {
-          totalClasses: updatedTotalClasses,
-          classesAttended: updatedClassesAttended,
-        });
-      }
-    } catch (error) {
-      console.error('Error updating student classes:', error);
-    }
-  };
-
   const handleSubmit = () => {
     generateExcelSheet(students);
   };
@@ -135,11 +108,9 @@ const Faculty: React.FC = () => {
     const worksheet = XLSX.utils.json_to_sheet(data.map(student => ({
       Name: student.name,
       Roll: student.roll,
-      TotalClasses: student.totalClasses,
-      ClassesAttended: student.classesAttended,
       Status: student.status,
-      Subject: student.subject,
-      PhoneNo: student.phoneNo,
+      Date: date,
+      Time: time,
     })));
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Attendance');
@@ -154,8 +125,8 @@ const Faculty: React.FC = () => {
   };
 
   return (
-    <div className="rounded-sm border border-stroke bg-white px-5 pt-6 pb-2.5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 xl:pb-1">
-      <h4 className="mb-6 text-xl font-semibold text-black dark:text-white">
+    <div className="rounded-sm border border-stroke bg-white px-4 pt-6 pb-4 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-6 md:px-8 lg:px-10 xl:px-12">
+      <h4 className="mb-6 text-lg font-semibold text-black dark:text-white md:text-xl lg:text-2xl">
         Faculty Management
       </h4>
 
@@ -191,90 +162,98 @@ const Faculty: React.FC = () => {
         </select>
       </div>
 
-      <div className="flex flex-col">
-        <div className="grid grid-cols-3 rounded-sm bg-gray-2 dark:bg-meta-4 sm:grid-cols-6">
-          <div className="p-2.5 xl:p-5">
-            <h5 className="text-sm font-medium uppercase xsm:text-base">Name</h5>
-          </div>
-          <div className="p-2.5 text-center xl:p-5">
-            <h5 className="text-sm font-medium uppercase xsm:text-base">Roll Number</h5>
-          </div>
-          <div className="p-2.5 text-center xl:p-5">
-            <h5 className="text-sm font-medium uppercase xsm:text-base">Total Classes</h5>
-          </div>
-          <div className="hidden p-2.5 text-center sm:block xl:p-5">
-            <h5 className="text-sm font-medium uppercase xsm:text-base">Classes Attended</h5>
-          </div>
-          <div className="hidden p-2.5 text-center sm:block xl:p-5">
-            <h5 className="text-sm font-medium uppercase xsm:text-base">Status</h5>
-          </div>
-          <div className="p-2.5 text-center xl:p-5">
-            <h5 className="text-sm font-medium uppercase xsm:text-base">Actions</h5>
-          </div>
-        </div>
-
-        {students.length > 0 ? (
-          students.map((student, key) => (
-            <div
-              className={`grid grid-cols-3 sm:grid-cols-6 ${
-                key === students.length - 1 ? '' : 'border-b border-stroke dark:border-strokedark'
-              }`}
-              key={student.id}
-            >
-              <div className="flex items-center gap-3 p-2.5 xl:p-5">
-                <div className="flex-shrink-0">
-                  <p className="hidden text-black dark:text-white sm:block">{student.name}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-center p-2.5 xl:p-5">
-                <p className="text-black dark:text-white">{student.roll}</p>
-              </div>
-
-              <div className="flex items-center justify-center p-2.5 xl:p-5">
-                <p className="text-meta-3">{student.totalClasses || 0}</p>
-              </div>
-
-              <div className="hidden items-center justify-center p-2.5 sm:flex xl:p-5">
-                <p className="text-black dark:text-white">{student.classesAttended || 0}</p>
-              </div>
-
-              <div className="hidden items-center justify-center p-2.5 sm:flex xl:p-5">
-                <p className="text-meta-5">{student.status || 'N/A'}</p>
-              </div>
-
-              <div className="flex items-center justify-center p-2.5 xl:p-5">
-                <button
-                  onClick={() => markPresent(student.id)}
-                  className="px-4 py-2 text-white bg-green-500 rounded-md hover:bg-green-600"
-                >
-                  Present
-                </button>
-                <button
-                  onClick={() =>
-                    markAbsent(
-                      student.id,
-                      student.name,
-                      student.roll,
-                      student.subject,
-                      student.phoneNo
-                    )
-                  }
-                  className="ml-2 px-4 py-2 text-white bg-red-500 rounded-md hover:bg-red-600"
-                >
-                  Absent
-                </button>
-              </div>
-            </div>
-          ))
-        ) : (
-          <p className="p-2.5 xl:p-5 text-black dark:text-white">No students found.</p>
-        )}
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-black dark:text-white">Date:</label>
+        <input
+          type="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          className="mt-1 block w-full pl-3 pr-10 py-2 text-base border border-gray-300 bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-black focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+        />
       </div>
-      <div className="flex justify-center">
+
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-black dark:text-white">Time:</label>
+        <input
+          type="time"
+          value={time}
+          onChange={(e) => setTime(e.target.value)}
+          className="mt-1 block w-full pl-3 pr-10 py-2 text-base border border-gray-300 bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-black focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+        />
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead className="bg-gray-50 dark:bg-gray-800">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                Name
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                Roll Number
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                Status
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+            {students.length > 0 ? (
+              students.map((student) => (
+                <tr key={student.id} className="hover:bg-gray-100 dark:hover:bg-gray-700">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-black dark:text-gray-100">
+                    {student.name}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-black dark:text-gray-300">
+                    {student.roll}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        student.status === 'present'
+                          ? 'bg-green-100 text-grey-800 dark:bg-green-900 dark:text-green-100'
+                          : student.status === 'absent'
+                          ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100'
+                          : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                      }`}
+                    >
+                      {student.status || 'N/A'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <button
+                      onClick={() => markPresent(student.id)}
+                      className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 mr-4"
+                    >
+                      Present
+                    </button>
+                    <button
+                      onClick={() => markAbsent(student.id, student.name, student.roll)}
+                      className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                    >
+                      Absent
+                    </button>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={4} className="px-6 py-4 text-center text-sm font-medium text-gray-500 dark:text-gray-300">
+                  No students found.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="flex justify-center mt-4">
         <button
           onClick={handleSubmit}
-          className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+          className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 dark:bg-blue-700 dark:hover:bg-blue-600"
         >
           Submit and Download Excel
         </button>

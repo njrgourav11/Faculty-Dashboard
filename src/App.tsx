@@ -7,6 +7,7 @@ import SignUp from './pages/Authentication/SignUp';
 import Calendar from './pages/Calendar';
 import Chart from './pages/Chart';
 import ECommerce from './pages/Dashboard/ECommerce';
+import Notifications from './pages/Dashboard/Notifications';
 import FormElements from './pages/Form/FormElements';
 import FormLayout from './pages/Form/FormLayout';
 import Profile from './pages/Profile';
@@ -54,6 +55,15 @@ function App() {
                 <>
                   <PageTitle title="Calendar | NIST - Faculty Admin Dashboard" />
                   <Calendar />
+                </>
+              }
+            />
+            <Route
+              path="/notifications"
+              element={
+                <>
+                  <PageTitle title="Notifications | NIST - Faculty Admin Dashboard" />
+                  <Notifications />
                 </>
               }
             />
